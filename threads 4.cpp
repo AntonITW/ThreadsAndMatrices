@@ -1,6 +1,3 @@
-﻿// ConsoleApplication1.cpp: определяет точку входа для консольного приложения.
-//
-
 #include <iostream>
 #include <random>
 #include <chrono>
@@ -10,7 +7,7 @@
 #include <mutex>
 
 using namespace std;
-
+//Объявляем мьютекс
 mutex m;
 
 static const int MATRIX_SIZE = 1000; //Размер матрицы
@@ -23,7 +20,7 @@ struct Matrix {
 	int** elements; //Ссылка на матрицу
 
 	//Инициализация матрицы с 0 во всех ячейках
-	void initialize_zero() {
+	void fill_zeros() {
 		elements = new int* [MATRIX_SIZE];
 		for (int i = 0; i < MATRIX_SIZE; ++i) {
 			elements[i] = new int[MATRIX_SIZE];
@@ -34,7 +31,7 @@ struct Matrix {
 	}
 
 	//Инициализация матрицы со случайными числами
-	void initialize_random() {
+	void fill_random() {
 		elements = new int* [MATRIX_SIZE];
 		for (int i = 0; i < MATRIX_SIZE; ++i) {
 			elements[i] = new int[MATRIX_SIZE];
@@ -57,20 +54,20 @@ struct Matrix {
 
 //Объявление функций
 void multiply(Matrix& r, const Matrix& m1, const Matrix& m2);
-void single_execution(Matrix& r, long long& elapsed_time, const Matrix& m1, const Matrix& m2);
-void multithreading_execution(Matrix& r, long long& elapsed_time, const Matrix& m1, const Matrix& m2);
-void multiply_threading(Matrix& result, const int thread_number, const Matrix& m1, const Matrix& m2);
+void one_thread(Matrix& r, long long& elapsed_time, const Matrix& m1, const Matrix& m2);
+void multiple_threads(Matrix& r, long long& elapsed_time, const Matrix& m1, const Matrix& m2);
+void multiply_with_threads(Matrix& result, const int thread_number, const Matrix& m1, const Matrix& m2);
 void timer(void(*execution_function)(Matrix& r, long long& elapsed_time, const Matrix& m1, const Matrix& m2));
 long long milliseconds_now();
 
 int main() {
 	srand(time(0));
 	//Вызов комплексной функции измерения среднего времени проведения умножения матриц в одном потоке
-	cout << "Single execution" << endl;
-	timer(single_execution);
+	cout << "Calculating time with one thread..." << endl;
+	timer(one_thread);
 	//Вызов комплексной функции измерения среднего времени проведения умножения матриц в некотором количестве потоков
-	cout << "Multi thread execution" << endl;
-	timer(multithreading_execution);
+	cout << "Calculating time with " << THREADS_NUMBER << "threads..." << endl;
+	timer(multiple_threads);
 	cout << "Calculation finished.";
 }
 
@@ -78,9 +75,9 @@ int main() {
 void timer(void(*execution_function)(Matrix& r, long long& elapsed_time, const Matrix& m1, const Matrix& m2)) {
 
 	Matrix m1, m2, r; //Инициализируем матрицы, для работы следующих функций
-	m1.initialize_random();
-	m2.initialize_random();//Заполняем первую и вторую матрицы случайными числами
-	r.initialize_zero();//Инициализируем матрицу результатов с 0
+	m1.fill_random();
+	m2.fill_random();//Заполняем первую и вторую матрицы случайными числами
+	r.fill_zeros();//Инициализируем матрицу результатов с 0
 
 	long long total_time = 0.0; //Инициализация общего времени
 	for (int i = 0; i < N_EXECUTIONS; ++i) {
@@ -108,7 +105,7 @@ void multiply(Matrix& r, const Matrix& m1, const Matrix& m2) {
 }
 
 //Функция выполнения одной операции перемножения матриц в одном потоке и замера времени
-void single_execution(Matrix& r, long long& elapsed_time, const Matrix& m1, const Matrix& m2) {
+void one_thread(Matrix& r, long long& elapsed_time, const Matrix& m1, const Matrix& m2) {
 	cout << "Starting single thread execution..." << endl;
 	long long start_time = milliseconds_now(); //Получаем время начала операции
 
@@ -122,7 +119,7 @@ void single_execution(Matrix& r, long long& elapsed_time, const Matrix& m1, cons
 }
 
 //Функция для распределения операции умножения на несколько потоков
-void multiply_threading(Matrix& result, const int thread_number, const Matrix& m1, const Matrix& m2) {
+void multiply_with_threads(Matrix& result, const int thread_number, const Matrix& m1, const Matrix& m2) {
 
 	const int n_elements = (MATRIX_SIZE * MATRIX_SIZE);  //Находим кол-во элементов в одной матрице
 	const int n_operations = n_elements / THREADS_NUMBER; //Находим количество операций, которые мы можем провести в отдельных потоках
@@ -157,14 +154,14 @@ void multiply_threading(Matrix& result, const int thread_number, const Matrix& m
 }
 
 //Функция для подсчёта времени выполнения операций в нескольких потоках
-void multithreading_execution(Matrix& r, long long& elapsed_time, const Matrix& m1, const Matrix& m2) {
+void multiple_threads(Matrix& r, long long& elapsed_time, const Matrix& m1, const Matrix& m2) {
 	cout << "Starting multithreading execution..." << endl;
 	long long start_time = milliseconds_now(); //Время начала
 	//Запускаем нужное количество потоков
-	thread thread1(multiply_threading, ref(r), 0, ref(m1), ref(m2));
-	thread thread2(multiply_threading, ref(r), 1, ref(m1), ref(m2));
-	thread thread3(multiply_threading, ref(r), 2, ref(m1), ref(m2));
-	thread thread4(multiply_threading, ref(r), 3, ref(m1), ref(m2));
+	thread thread1(multiply_with_threads, ref(r), 0, ref(m1), ref(m2));
+	thread thread2(multiply_with_threads, ref(r), 1, ref(m1), ref(m2));
+	thread thread3(multiply_with_threads, ref(r), 2, ref(m1), ref(m2));
+	thread thread4(multiply_with_threads, ref(r), 3, ref(m1), ref(m2));
 	//И затем ждём их завершения
 	thread1.join();
 	thread2.join();
